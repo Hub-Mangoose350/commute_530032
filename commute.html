@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>通勤乗換検索</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 16px;
+      padding-bottom: 36px;
+    }
+
+    /* ── ヘッダー ── */
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 20px 16px 16px;
+      margin-bottom: 16px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .date-str { font-size: 13px; color: #888; margin-bottom: 4px; }
+    .day-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .day-badge.weekday  { background: #e8f0fe; color: #1a73e8; }
+    .day-badge.saturday { background: #fff3e0; color: #e65100; }
+    .day-badge.holiday  { background: #fce8e6; color: #c62828; }
+    .clock { font-size: 44px; font-weight: 700; letter-spacing: 2px; color: #1c2333; }
+
+    /* ── 日付選択 ── */
+    .date-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .date-selector button {
+      flex: 1;
+      padding: 10px 0;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .date-selector button.active {
+      background: #1a73e8;
+      border-color: #1a73e8;
+      color: white;
+    }
+
+    /* ── セクション ── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin: 0 4px 8px;
+    }
+    .section { margin-bottom: 20px; }
+
+    /* ── 検索パネル（現在時刻・時刻指定 共通） ── */
+    .search-panel {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .search-panel label {
+      font-size: 13px;
+      color: #666;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    /* 現在時刻表示（読み取り専用） */
+    .now-display {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 22px;
+      font-weight: 600;
+      color: #1c2333;
+      background: #f8f9fa;
+      border: 1.5px solid #e8eaed;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+
+    /* 時刻入力 */
+    .search-panel input[type=time] {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 22px;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+    .search-panel input[type=time]:focus { border-color: #1a73e8; }
+
+    /* ボタングリッド（2列×2行） */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* ── ボタン ── */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 6px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      line-height: 1.3;
+      box-shadow: 0 2px 6px rgba(0,0,0,.12);
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { opacity: .8; transform: scale(.97); }
+    .btn-blue   { background: #1a73e8; color: white; }
+    .btn-red    { background: #d32f2f; color: white; }
+    .btn-green  { background: #2e7d32; color: white; }
+    .btn-yellow { background: #f9a825; color: white; }
+
+    /* ── ルート詳細 ── */
+    .route-card {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .route-card summary {
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      color: #1a73e8;
+      list-style: none;
+    }
+    .route-card summary::after { content: ' ▼'; font-size: 11px; }
+    .route-card[open] summary::after { content: ' ▲'; }
+    .route-steps { margin-top: 12px; }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f0f0f0;
+      line-height: 1.4;
+    }
+    .step:last-child { border-bottom: none; }
+    .step-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+    .step-text { flex: 1; color: #333; }
+    .step-text .line { font-size: 11px; color: #888; }
+
+    /* ── 注意事項 ── */
+    .notice {
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .notice.warn   { background: #fff8e1; border-left: 4px solid #f9a825; }
+    .notice.danger { background: #fce8e6; border-left: 4px solid #c62828; }
+    .notice-icon { font-size: 18px; flex-shrink: 0; }
+    .notice-body { font-size: 13px; line-height: 1.5; color: #333; }
+    .notice-body strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header">
+  <div class="date-str" id="dateStr">読み込み中…</div>
+  <div class="day-badge" id="dayBadge">　</div>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+<!-- 日付選択 -->
+<div class="date-selector">
+  <button onclick="setOffset(-1)" id="btnYesterday">昨日</button>
+  <button onclick="setOffset(0)"  id="btnToday"     class="active">今日</button>
+  <button onclick="setOffset(1)"  id="btnTomorrow"  >明日</button>
+</div>
+
+<!-- 現在時刻で出発 -->
+<div class="section">
+  <div class="section-label">現在時刻で出発</div>
+  <div class="search-panel">
+    <label>出発時刻</label>
+    <div class="now-display" id="nowDisplay">--:--</div>
+    <div class="btn-grid">
+      <a id="nowTrainHome" class="btn btn-blue"   href="#" target="_blank" rel="noopener">🚃 東飯能<br>→ 高尾</a>
+      <a id="nowTrainWork" class="btn btn-red"    href="#" target="_blank" rel="noopener">🚃 高尾<br>→ 東飯能</a>
+      <a id="nowBusHome"   class="btn btn-green"  href="#" target="_blank" rel="noopener">🚌 美杉台<br>→ 飯能</a>
+      <a id="nowBusWork"   class="btn btn-yellow" href="#" target="_blank" rel="noopener">🚌 飯能<br>→ 美杉台</a>
+    </div>
+  </div>
+</div>
+
+<!-- 時刻を指定して検索 -->
+<div class="section">
+  <div class="section-label">時刻を指定して検索</div>
+  <div class="search-panel">
+    <label>出発時刻</label>
+    <input type="time" id="customTime" oninput="updateCustomLinks()">
+    <div class="btn-grid">
+      <a id="customTrainHome" class="btn btn-blue"   href="#" target="_blank" rel="noopener">🚃 東飯能<br>→ 高尾</a>
+      <a id="customTrainWork" class="btn btn-red"    href="#" target="_blank" rel="noopener">🚃 高尾<br>→ 東飯能</a>
+      <a id="customBusHome"   class="btn btn-green"  href="#" target="_blank" rel="noopener">🚌 美杉台<br>→ 飯能</a>
+      <a id="customBusWork"   class="btn btn-yellow" href="#" target="_blank" rel="noopener">🚌 飯能<br>→ 美杉台</a>
+    </div>
+  </div>
+</div>
+
+<!-- ルート詳細 -->
+<div class="section">
+  <div class="section-label">ルート確認</div>
+  <details class="route-card">
+    <summary>🏠 自宅 → 職場 ルート詳細</summary>
+    <div class="route-steps">
+      <div class="step"><div class="step-icon">🚌</div><div class="step-text">西武バス「美杉台ニュータウン」乗車<div class="line">→ 西武バス「飯能駅南口」下車</div></div></div>
+      <div class="step"><div class="step-icon">🚶</div><div class="step-text">飯能駅南口から東飯能駅まで早歩き約10分<div class="line">※ 西武秩父線 飯能↔東飯能は利用不可（徒歩で移動）</div></div></div>
+      <div class="step"><div class="step-icon">🚃</div><div class="step-text">JR八高線「東飯能」乗車<div class="line">→「八王子」下車　※「拝島行き」は乗らない</div></div></div>
+      <div class="step"><div class="step-icon">🚃</div><div class="step-text">JR中央線「八王子」乗車<div class="line">→「高尾」下車</div></div></div>
+    </div>
+  </details>
+  <details class="route-card">
+    <summary>🏢 職場 → 自宅 ルート詳細</summary>
+    <div class="route-steps">
+      <div class="step"><div class="step-icon">🚃</div><div class="step-text">JR中央線「高尾」乗車<div class="line">→「八王子」下車</div></div></div>
+      <div class="step"><div class="step-icon">🚃</div><div class="step-text">JR八高線「八王子」乗車<div class="line">→「東飯能」下車　※「拝島行き」は乗らない</div></div></div>
+      <div class="step"><div class="step-icon">🚶</div><div class="step-text">東飯能駅から飯能駅南口まで徒歩約15分<div class="line">※ 西武秩父線 東飯能↔飯能は利用不可（徒歩で移動）</div></div></div>
+      <div class="step"><div class="step-icon">🚌</div><div class="step-text">西武バス「飯能駅南口」乗車<div class="line">→「美杉台ニュータウン」下車</div></div></div>
+    </div>
+  </details>
+</div>
+
+<!-- 注意事項 -->
+<div class="section">
+  <div class="section-label">注意事項</div>
+  <div class="notice danger">
+    <div class="notice-icon">🚫</div>
+    <div class="notice-body">
+      <strong>八高線「拝島行き」は対象外</strong>
+      検索結果で「拝島」行きが表示されても乗らないでください。必ず「八王子」または「高麗川」方面の列車を選んでください。
+    </div>
+  </div>
+  <div class="notice danger">
+    <div class="notice-icon">🚫</div>
+    <div class="notice-body">
+      <strong>西武秩父線 飯能↔東飯能は利用不可</strong>
+      通勤経路に認められていません。この区間は必ず徒歩で移動してください。
+    </div>
+  </div>
+  <div class="notice warn">
+    <div class="notice-icon">⚠️</div>
+    <div class="notice-body">
+      <strong>八高線は接続を待ちません</strong>
+      単線で約30分に1本の運行です。中央線が遅れた場合も、八高線は定時で発車します。
+    </div>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────
+// 祝日データ (2025〜2027)
+// ──────────────────────────────────
+const HOLIDAYS = new Set([
+  // 2025
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24',
+  '2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06',
+  '2025-07-21','2025-08-11','2025-09-15','2025-09-22','2025-09-23',
+  '2025-10-13','2025-11-03','2025-11-23','2025-11-24',
+  // 2026
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23',
+  '2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-23',
+  '2026-10-12','2026-11-03','2026-11-23',
+  // 2027
+  '2027-01-01','2027-01-11','2027-02-11','2027-02-23',
+  '2027-03-21','2027-04-29','2027-05-03','2027-05-04','2027-05-05',
+  '2027-07-19','2027-08-11','2027-09-20','2027-09-23',
+  '2027-10-11','2027-11-03','2027-11-23',
+]);
+
+function p2(n) { return String(n).padStart(2, '0'); }
+function toKey(d) { return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`; }
+
+function getDayType(d) {
+  if (HOLIDAYS.has(toKey(d))) return 'holiday';
+  const w = d.getDay();
+  if (w === 0) return 'holiday';
+  if (w === 6) return 'saturday';
+  return 'weekday';
+}
+
+const DAY_LABELS = { weekday: '平日ダイヤ', saturday: '土曜ダイヤ', holiday: '休日ダイヤ' };
+const WEEK_JP = ['日','月','火','水','木','金','土'];
+
+// ──────────────────────────────────
+// 日付オフセット管理
+// ──────────────────────────────────
+let dateOffset = 0;
+
+function getTargetDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + dateOffset);
+  return d;
+}
+
+function setOffset(n) {
+  dateOffset = n;
+  ['btnYesterday','btnToday','btnTomorrow'].forEach((id, i) => {
+    document.getElementById(id).classList.toggle('active', (i - 1) === n);
+  });
+  updateAll();
+}
+
+// ──────────────────────────────────
+// Yahoo!乗換案内 URL生成
+// ──────────────────────────────────
+function enc(s) { return encodeURIComponent(s).replace(/%2F/g, '/'); }
+
+function yahooUrl(from, to, year, month, day, hour, minute) {
+  const mm = p2(minute);
+  return 'https://transit.yahoo.co.jp/search/result'
+    + `?from=${enc(from)}&to=${enc(to)}`
+    + `&y=${year}&m=${p2(month)}&d=${p2(day)}`
+    + `&hh=${p2(hour)}&m1=${mm[0]}&m2=${mm[1]}`
+    + '&type=1&ticket=ic';
+}
+
+// ──────────────────────────────────
+// ルート定義
+// ──────────────────────────────────
+const ROUTES = {
+  trainHome: ['東飯能',                        '高尾（東京）'],
+  trainWork: ['高尾（東京）',                   '東飯能'],
+  busHome:   ['美杉台ニュータウン/西武バス',    '飯能駅南口/西武バス'],
+  busWork:   ['飯能駅南口/西武バス',            '美杉台ニュータウン/西武バス'],
+};
+
+function buildUrl(routeKey, hour, minute) {
+  const t = getTargetDate();
+  const [from, to] = ROUTES[routeKey];
+  return yahooUrl(from, to, t.getFullYear(), t.getMonth()+1, t.getDate(), hour, minute);
+}
+
+// ──────────────────────────────────
+// リンク更新
+// ──────────────────────────────────
+function updateNowLinks() {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes();
+  document.getElementById('nowDisplay').textContent = `${p2(h)}:${p2(m)}`;
+  document.getElementById('nowTrainHome').href = buildUrl('trainHome', h, m);
+  document.getElementById('nowTrainWork').href = buildUrl('trainWork', h, m);
+  document.getElementById('nowBusHome').href   = buildUrl('busHome',   h, m);
+  document.getElementById('nowBusWork').href   = buildUrl('busWork',   h, m);
+}
+
+function updateCustomLinks() {
+  const val = document.getElementById('customTime').value;
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  document.getElementById('customTrainHome').href = buildUrl('trainHome', h, m);
+  document.getElementById('customTrainWork').href = buildUrl('trainWork', h, m);
+  document.getElementById('customBusHome').href   = buildUrl('busHome',   h, m);
+  document.getElementById('customBusWork').href   = buildUrl('busWork',   h, m);
+}
+
+// ──────────────────────────────────
+// ヘッダー表示更新
+// ──────────────────────────────────
+function updateHeader() {
+  const now    = new Date();
+  const target = getTargetDate();
+  const type   = getDayType(target);
+  const label  = dateOffset === -1 ? '昨日' : dateOffset === 1 ? '明日' : '今日';
+
+  document.getElementById('dateStr').textContent =
+    `${label}：${target.getFullYear()}年${target.getMonth()+1}月${target.getDate()}日（${WEEK_JP[target.getDay()]}）`;
+
+  const badge = document.getElementById('dayBadge');
+  badge.textContent = DAY_LABELS[type];
+  badge.className = `day-badge ${type}`;
+
+  document.getElementById('clock').textContent = `${p2(now.getHours())}:${p2(now.getMinutes())}`;
+}
+
+function updateAll() {
+  updateHeader();
+  updateNowLinks();
+  updateCustomLinks();
+}
+
+// ──────────────────────────────────
+// 起動・定期更新
+// ──────────────────────────────────
+const _now = new Date();
+document.getElementById('customTime').value = `${p2(_now.getHours())}:${p2(_now.getMinutes())}`;
+
+updateAll();
+setInterval(updateAll, 15000);
+</script>
+
+</body>
+</html>
