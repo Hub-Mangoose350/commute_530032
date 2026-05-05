@@ -215,10 +215,10 @@
   <div class="section-label">現在時刻で出発</div>
   <div class="search-panel">
     <div class="btn-grid">
-      <a id="nowTrainHome" class="btn btn-blue"   href="#" target="_blank" rel="noopener">🚃 東飯能<br>→ 高尾</a>
-      <a id="nowTrainWork" class="btn btn-red"    href="#" target="_blank" rel="noopener">🚃 高尾<br>→ 東飯能</a>
-      <a id="nowBusHome"   class="btn btn-green"  href="#" target="_blank" rel="noopener">🚌 美杉台<br>→ 飯能</a>
-      <a id="nowBusWork"   class="btn btn-yellow" href="#" target="_blank" rel="noopener">🚌 飯能<br>→ 美杉台</a>
+      <button class="btn btn-blue"   onclick="openNow('trainHome')">🚃 東飯能<br>→ 高尾</button>
+      <button class="btn btn-red"    onclick="openNow('trainWork')">🚃 高尾<br>→ 東飯能</button>
+      <button class="btn btn-green"  onclick="openNow('busHome')">🚌 美杉台<br>→ 飯能</button>
+      <button class="btn btn-yellow" onclick="openNow('busWork')">🚌 飯能<br>→ 美杉台</button>
     </div>
   </div>
 </div>
@@ -228,12 +228,12 @@
   <div class="section-label">時刻を指定して検索</div>
   <div class="search-panel">
     <label>出発時刻</label>
-    <input type="time" id="customTime" oninput="updateCustomLinks()" onchange="updateCustomLinks()">
+    <input type="time" id="customTime">
     <div class="btn-grid">
-      <a id="customTrainHome" class="btn btn-blue"   href="#" onclick="refreshCustom('trainHome',this)" target="_blank" rel="noopener">🚃 東飯能<br>→ 高尾</a>
-      <a id="customTrainWork" class="btn btn-red"    href="#" onclick="refreshCustom('trainWork',this)" target="_blank" rel="noopener">🚃 高尾<br>→ 東飯能</a>
-      <a id="customBusHome"   class="btn btn-green"  href="#" onclick="refreshCustom('busHome',this)"   target="_blank" rel="noopener">🚌 美杉台<br>→ 飯能</a>
-      <a id="customBusWork"   class="btn btn-yellow" href="#" onclick="refreshCustom('busWork',this)"   target="_blank" rel="noopener">🚌 飯能<br>→ 美杉台</a>
+      <button class="btn btn-blue"   onclick="openCustom('trainHome')">🚃 東飯能<br>→ 高尾</button>
+      <button class="btn btn-red"    onclick="openCustom('trainWork')">🚃 高尾<br>→ 東飯能</button>
+      <button class="btn btn-green"  onclick="openCustom('busHome')">🚌 美杉台<br>→ 飯能</button>
+      <button class="btn btn-yellow" onclick="openCustom('busWork')">🚌 飯能<br>→ 美杉台</button>
     </div>
   </div>
 </div>
@@ -363,32 +363,27 @@ function buildUrl(routeKey, hour, minute) {
 }
 
 // ──────────────────────────────────
-// リンク更新
+// リンクを開く（スマホではアプリ起動を防ぐ）
 // ──────────────────────────────────
-function updateNowLinks() {
+function openUrl(url) {
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    // about:blank 経由で遷移するとユニバーサルリンクによるアプリ起動を防げる
+    const w = window.open('about:blank', '_blank');
+    if (w) { w.location.href = url; return; }
+  }
+  window.open(url, '_blank', 'noopener');
+}
+
+function openNow(routeKey) {
   const now = new Date();
-  const h = now.getHours(), m = now.getMinutes();
-  document.getElementById('nowTrainHome').href = buildUrl('trainHome', h, m);
-  document.getElementById('nowTrainWork').href = buildUrl('trainWork', h, m);
-  document.getElementById('nowBusHome').href   = buildUrl('busHome',   h, m);
-  document.getElementById('nowBusWork').href   = buildUrl('busWork',   h, m);
+  openUrl(buildUrl(routeKey, now.getHours(), now.getMinutes()));
 }
 
-function updateCustomLinks() {
+function openCustom(routeKey) {
   const val = document.getElementById('customTime').value;
   if (!val) return;
   const [h, m] = val.split(':').map(Number);
-  document.getElementById('customTrainHome').href = buildUrl('trainHome', h, m);
-  document.getElementById('customTrainWork').href = buildUrl('trainWork', h, m);
-  document.getElementById('customBusHome').href   = buildUrl('busHome',   h, m);
-  document.getElementById('customBusWork').href   = buildUrl('busWork',   h, m);
-}
-
-function refreshCustom(routeKey, el) {
-  const val = document.getElementById('customTime').value;
-  if (!val) return;
-  const [h, m] = val.split(':').map(Number);
-  el.href = buildUrl(routeKey, h, m);
+  openUrl(buildUrl(routeKey, h, m));
 }
 
 // ──────────────────────────────────
@@ -412,8 +407,6 @@ function updateHeader() {
 
 function updateAll() {
   updateHeader();
-  updateNowLinks();
-  updateCustomLinks();
 }
 
 // ──────────────────────────────────
