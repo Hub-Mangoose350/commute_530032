@@ -101,6 +101,32 @@
       letter-spacing: 1px;
     }
 
+    /* 出発／到着トグル */
+    .time-type-toggle {
+      display: flex;
+      gap: 0;
+      margin-bottom: 10px;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .time-type-toggle button {
+      flex: 1;
+      padding: 9px 0;
+      border: none;
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .time-type-toggle button.active {
+      background: #e75480;
+      color: white;
+    }
+    .time-type-toggle button:first-child { border-right: 1px solid #ddd; }
+
     /* 時刻入力 */
     .search-panel input[type=time] {
       width: 100%;
@@ -227,7 +253,10 @@
 <div class="section">
   <div class="section-label">時刻を指定して検索</div>
   <div class="search-panel">
-    <label>出発時刻</label>
+    <div class="time-type-toggle">
+      <button id="btnDepart" class="active" onclick="setTimeType('depart')">出発</button>
+      <button id="btnArrive"               onclick="setTimeType('arrive')">到着</button>
+    </div>
     <input type="time" id="customTime">
     <div class="btn-grid">
       <button class="btn btn-blue"   onclick="openCustom('trainHome')">🚃 東飯能<br>→ 高尾</button>
@@ -337,13 +366,15 @@ function setOffset(n) {
 // ──────────────────────────────────
 function enc(s) { return encodeURIComponent(s).replace(/%2F/g, '/'); }
 
-function yahooUrl(from, to, year, month, day, hour, minute) {
+function yahooUrl(from, to, year, month, day, hour, minute, searchType) {
   const mm = p2(minute);
+  // type=1:出発, type=4:到着
+  const t = searchType === 'arrive' ? 4 : 1;
   return 'https://transit.yahoo.co.jp/search/result'
     + `?from=${enc(from)}&to=${enc(to)}`
     + `&y=${year}&m=${p2(month)}&d=${p2(day)}`
     + `&hh=${p2(hour)}&m1=${mm[0]}&m2=${mm[1]}`
-    + '&type=1&ticket=ic';
+    + `&type=${t}&ticket=ic`;
 }
 
 // ──────────────────────────────────
@@ -356,10 +387,18 @@ const ROUTES = {
   busWork:   ['飯能駅南口/西武バス',            '美杉台ニュータウン/西武バス'],
 };
 
-function buildUrl(routeKey, hour, minute) {
+let customTimeType = 'depart';
+
+function setTimeType(type) {
+  customTimeType = type;
+  document.getElementById('btnDepart').classList.toggle('active', type === 'depart');
+  document.getElementById('btnArrive').classList.toggle('active', type === 'arrive');
+}
+
+function buildUrl(routeKey, hour, minute, searchType) {
   const t = getTargetDate();
   const [from, to] = ROUTES[routeKey];
-  return yahooUrl(from, to, t.getFullYear(), t.getMonth()+1, t.getDate(), hour, minute);
+  return yahooUrl(from, to, t.getFullYear(), t.getMonth()+1, t.getDate(), hour, minute, searchType);
 }
 
 // ──────────────────────────────────
@@ -383,7 +422,7 @@ function openCustom(routeKey) {
   const val = document.getElementById('customTime').value;
   if (!val) return;
   const [h, m] = val.split(':').map(Number);
-  openUrl(buildUrl(routeKey, h, m));
+  openUrl(buildUrl(routeKey, h, m, customTimeType));
 }
 
 // ──────────────────────────────────
