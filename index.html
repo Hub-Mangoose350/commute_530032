@@ -127,20 +127,29 @@
     }
     .time-type-toggle button:first-child { border-right: 1px solid #ddd; }
 
-    /* 時刻入力 */
-    .search-panel input[type=time] {
-      width: 100%;
-      max-width: 100%;
-      padding: 10px 12px;
-      font-size: 18px;
+    /* 時刻セレクト */
+    .time-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .time-select-wrap select {
+      flex: 1;
+      padding: 10px 4px;
+      font-size: 28px;
+      font-weight: 700;
       text-align: center;
       border: 1.5px solid #ddd;
       border-radius: 10px;
-      margin-bottom: 12px;
+      background: white;
+      color: #1c2333;
       outline: none;
-      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
     }
-    .search-panel input[type=time]:focus { border-color: #1a73e8; }
+    .time-select-wrap select:focus { border-color: #e75480; }
+    .time-sep { font-size: 32px; font-weight: 700; color: #1c2333; flex-shrink: 0; }
 
     /* ボタングリッド（2列×2行） */
     .btn-grid {
@@ -257,7 +266,11 @@
       <button id="btnDepart" class="active" onclick="setTimeType('depart')">出発</button>
       <button id="btnArrive"               onclick="setTimeType('arrive')">到着</button>
     </div>
-    <input type="time" id="customTime">
+    <div class="time-select-wrap">
+      <select id="customHour"></select>
+      <span class="time-sep">:</span>
+      <select id="customMinute"></select>
+    </div>
     <div class="btn-grid">
       <button class="btn btn-blue"   onclick="openCustom('trainHome')">🚃 東飯能<br>→ 高尾</button>
       <button class="btn btn-red"    onclick="openCustom('trainWork')">🚃 高尾<br>→ 東飯能</button>
@@ -406,9 +419,10 @@ function buildUrl(routeKey, hour, minute, searchType) {
 // ──────────────────────────────────
 function openUrl(url) {
   if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-    // about:blank 経由で遷移するとユニバーサルリンクによるアプリ起動を防げる
     const w = window.open('about:blank', '_blank');
     if (w) { w.location.href = url; return; }
+    window.location.href = url;
+    return;
   }
   window.open(url, '_blank', 'noopener');
 }
@@ -419,9 +433,8 @@ function openNow(routeKey) {
 }
 
 function openCustom(routeKey) {
-  const val = document.getElementById('customTime').value;
-  if (!val) return;
-  const [h, m] = val.split(':').map(Number);
+  const h = parseInt(document.getElementById('customHour').value, 10);
+  const m = parseInt(document.getElementById('customMinute').value, 10);
   openUrl(buildUrl(routeKey, h, m, customTimeType));
 }
 
@@ -452,7 +465,20 @@ function updateAll() {
 // 起動・定期更新
 // ──────────────────────────────────
 const _now = new Date();
-document.getElementById('customTime').value = `${p2(_now.getHours())}:${p2(_now.getMinutes())}`;
+const _hourSel = document.getElementById('customHour');
+const _minSel  = document.getElementById('customMinute');
+for (let h = 0; h < 24; h++) {
+  const o = document.createElement('option');
+  o.value = h; o.textContent = p2(h);
+  _hourSel.appendChild(o);
+}
+for (let m = 0; m < 60; m++) {
+  const o = document.createElement('option');
+  o.value = m; o.textContent = p2(m);
+  _minSel.appendChild(o);
+}
+_hourSel.value = _now.getHours();
+_minSel.value  = _now.getMinutes();
 
 updateAll();
 setInterval(updateAll, 15000);
