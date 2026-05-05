@@ -228,12 +228,12 @@
   <div class="section-label">時刻を指定して検索</div>
   <div class="search-panel">
     <label>出発時刻</label>
-    <input type="time" id="customTime" oninput="updateCustomLinks()">
+    <input type="time" id="customTime" oninput="updateCustomLinks()" onchange="updateCustomLinks()">
     <div class="btn-grid">
-      <a id="customTrainHome" class="btn btn-blue"   href="#" target="_blank" rel="noopener">🚃 東飯能<br>→ 高尾</a>
-      <a id="customTrainWork" class="btn btn-red"    href="#" target="_blank" rel="noopener">🚃 高尾<br>→ 東飯能</a>
-      <a id="customBusHome"   class="btn btn-green"  href="#" target="_blank" rel="noopener">🚌 美杉台<br>→ 飯能</a>
-      <a id="customBusWork"   class="btn btn-yellow" href="#" target="_blank" rel="noopener">🚌 飯能<br>→ 美杉台</a>
+      <a id="customTrainHome" class="btn btn-blue"   href="#" onclick="refreshCustom('trainHome',this)" target="_blank" rel="noopener">🚃 東飯能<br>→ 高尾</a>
+      <a id="customTrainWork" class="btn btn-red"    href="#" onclick="refreshCustom('trainWork',this)" target="_blank" rel="noopener">🚃 高尾<br>→ 東飯能</a>
+      <a id="customBusHome"   class="btn btn-green"  href="#" onclick="refreshCustom('busHome',this)"   target="_blank" rel="noopener">🚌 美杉台<br>→ 飯能</a>
+      <a id="customBusWork"   class="btn btn-yellow" href="#" onclick="refreshCustom('busWork',this)"   target="_blank" rel="noopener">🚌 飯能<br>→ 美杉台</a>
     </div>
   </div>
 </div>
@@ -382,6 +382,13 @@ function updateCustomLinks() {
   document.getElementById('customTrainWork').href = buildUrl('trainWork', h, m);
   document.getElementById('customBusHome').href   = buildUrl('busHome',   h, m);
   document.getElementById('customBusWork').href   = buildUrl('busWork',   h, m);
+}
+
+function refreshCustom(routeKey, el) {
+  const val = document.getElementById('customTime').value;
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  el.href = buildUrl(routeKey, h, m);
 }
 
 // ──────────────────────────────────
