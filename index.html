@@ -57,8 +57,8 @@
       transition: all .15s;
     }
     .date-selector button.active {
-      background: #1a73e8;
-      border-color: #1a73e8;
+      background: #e75480;
+      border-color: #e75480;
       color: white;
     }
 
@@ -104,12 +104,15 @@
     /* 時刻入力 */
     .search-panel input[type=time] {
       width: 100%;
+      max-width: 100%;
       padding: 10px 12px;
-      font-size: 22px;
+      font-size: 18px;
+      text-align: center;
       border: 1.5px solid #ddd;
       border-radius: 10px;
       margin-bottom: 12px;
       outline: none;
+      box-sizing: border-box;
     }
     .search-panel input[type=time]:focus { border-color: #1a73e8; }
 
@@ -186,6 +189,7 @@
     }
     .notice.warn   { background: #fff8e1; border-left: 4px solid #f9a825; }
     .notice.danger { background: #fce8e6; border-left: 4px solid #c62828; }
+    .notice.info   { background: #e8f4fd; border-left: 4px solid #1a73e8; }
     .notice-icon { font-size: 18px; flex-shrink: 0; }
     .notice-body { font-size: 13px; line-height: 1.5; color: #333; }
     .notice-body strong { display: block; font-size: 14px; margin-bottom: 2px; }
@@ -202,17 +206,14 @@
 
 <!-- 日付選択 -->
 <div class="date-selector">
-  <button onclick="setOffset(-1)" id="btnYesterday">昨日</button>
-  <button onclick="setOffset(0)"  id="btnToday"     class="active">今日</button>
-  <button onclick="setOffset(1)"  id="btnTomorrow"  >明日</button>
+  <button onclick="setOffset(0)"  id="btnToday"    class="active">今日</button>
+  <button onclick="setOffset(1)"  id="btnTomorrow" >明日</button>
 </div>
 
 <!-- 現在時刻で出発 -->
 <div class="section">
   <div class="section-label">現在時刻で出発</div>
   <div class="search-panel">
-    <label>出発時刻</label>
-    <div class="now-display" id="nowDisplay">--:--</div>
     <div class="btn-grid">
       <a id="nowTrainHome" class="btn btn-blue"   href="#" target="_blank" rel="noopener">🚃 東飯能<br>→ 高尾</a>
       <a id="nowTrainWork" class="btn btn-red"    href="#" target="_blank" rel="noopener">🚃 高尾<br>→ 東飯能</a>
@@ -264,25 +265,16 @@
 <div class="section">
   <div class="section-label">注意事項</div>
   <div class="notice danger">
-    <div class="notice-icon">🚫</div>
-    <div class="notice-body">
-      <strong>八高線「拝島行き」は対象外</strong>
-      検索結果で「拝島」行きが表示されても乗らないでください。必ず「八王子」または「高麗川」方面の列車を選んでください。
-    </div>
-  </div>
-  <div class="notice danger">
-    <div class="notice-icon">🚫</div>
-    <div class="notice-body">
-      <strong>西武秩父線 飯能↔東飯能は利用不可</strong>
-      通勤経路に認められていません。この区間は必ず徒歩で移動してください。
-    </div>
+    <div class="notice-icon">❗️</div>
+    <div class="notice-body">バス乗車時間は８分、飯能駅↔東飯能駅は徒歩12分</div>
   </div>
   <div class="notice warn">
     <div class="notice-icon">⚠️</div>
-    <div class="notice-body">
-      <strong>八高線は接続を待ちません</strong>
-      単線で約30分に1本の運行です。中央線が遅れた場合も、八高線は定時で発車します。
-    </div>
+    <div class="notice-body">「拝島」「箱根ヶ崎」行きあるので注意</div>
+  </div>
+  <div class="notice info">
+    <div class="notice-icon">🤞</div>
+    <div class="notice-body">中央線の運行情報に注意</div>
   </div>
 </div>
 
@@ -335,9 +327,8 @@ function getTargetDate() {
 
 function setOffset(n) {
   dateOffset = n;
-  ['btnYesterday','btnToday','btnTomorrow'].forEach((id, i) => {
-    document.getElementById(id).classList.toggle('active', (i - 1) === n);
-  });
+  document.getElementById('btnToday').classList.toggle('active', n === 0);
+  document.getElementById('btnTomorrow').classList.toggle('active', n === 1);
   updateAll();
 }
 
@@ -377,7 +368,6 @@ function buildUrl(routeKey, hour, minute) {
 function updateNowLinks() {
   const now = new Date();
   const h = now.getHours(), m = now.getMinutes();
-  document.getElementById('nowDisplay').textContent = `${p2(h)}:${p2(m)}`;
   document.getElementById('nowTrainHome').href = buildUrl('trainHome', h, m);
   document.getElementById('nowTrainWork').href = buildUrl('trainWork', h, m);
   document.getElementById('nowBusHome').href   = buildUrl('busHome',   h, m);
