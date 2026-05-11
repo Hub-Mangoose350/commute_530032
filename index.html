@@ -180,6 +180,23 @@
     }
     .time-sep { font-size: 32px; font-weight: 700; color: #1c2333; flex-shrink: 0; }
 
+    /* スマホ用注意書き */
+    .mobile-hint {
+      display: none;
+      background: #fff8e1;
+      border-left: 4px solid #f9a825;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #5d4037;
+    }
+    .mobile-hint strong { color: #c62828; }
+    @media (hover: none) and (pointer: coarse) {
+      .mobile-hint { display: block; }
+    }
+
     /* ボタングリッド（2列×2行） */
     .btn-grid {
       display: grid;
@@ -291,6 +308,10 @@
 <div class="section">
   <div class="section-label">時刻を指定して検索</div>
   <div class="search-panel">
+    <div class="mobile-hint">
+      ⚠️ スマホはYahoo乗換アプリが起動し、<strong>時刻指定が無視されます</strong>。<br>
+      下のルーレットで希望時刻を確認 → ボタンをタップ → Yahoo乗換アプリの画面上部の時刻を、その時刻に手動で合わせてください。
+    </div>
     <div class="time-type-toggle">
       <button id="btnDepart" class="active" onclick="setTimeType('depart')">出発</button>
       <button id="btnArrive"               onclick="setTimeType('arrive')">到着</button>
@@ -454,22 +475,7 @@ function isMobile() {
 }
 
 function openUrl(url) {
-  if (isMobile()) {
-    // スマホではYahoo乗換アプリが transit.yahoo.co.jp を横取りして
-    // URLの時刻パラメータを無視するため、Universal Link（アプリ自動起動）を
-    // 回避する。空白タブを開いた後、JavaScriptで遷移することで、
-    // OSは「ユーザークリック」ではなく「JSナビゲーション」と判定し、
-    // ブラウザ内で開かれる。
-    const win = window.open('about:blank', '_blank');
-    if (win) {
-      setTimeout(() => { win.location.href = url; }, 50);
-    } else {
-      // ポップアップブロック等で開けない場合のフォールバック
-      window.location.href = url;
-    }
-  } else {
-    window.open(url, '_blank', 'noopener');
-  }
+  window.open(url, '_blank', 'noopener');
 }
 
 function openNow(routeKey) {
