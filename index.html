@@ -408,21 +408,11 @@ function setOffset(n) {
 // ──────────────────────────────────
 function enc(s) { return encodeURIComponent(s); }
 
-function isMobile() {
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-}
-
 function yahooUrl(from, to, year, month, day, hour, minute, searchType) {
   const mm = p2(minute);
   // type=1:出発, type=4:到着
   const t = searchType === 'arrive' ? 4 : 1;
-
-  // スマホはアプリが /search/result の時刻を無視するため、
-  // 検索フォーム画面（/search/）に駅名・日付・時刻を渡して開く。
-  // ユーザーが画面で時刻を確認して「検索」をタップする想定。
-  const path = isMobile() ? '/search/' : '/search/result';
-
-  return 'https://transit.yahoo.co.jp' + path
+  return 'https://transit.yahoo.co.jp/search/result'
     + `?from=${enc(from)}&to=${enc(to)}`
     + `&fromgid=&togid=&flatlon=&tlatlon=&via=&viacode=`
     + `&y=${year}&m=${p2(month)}&d=${p2(day)}`
@@ -459,8 +449,20 @@ function buildUrl(routeKey, hour, minute, searchType) {
 // ──────────────────────────────────
 // リンクを開く
 // ──────────────────────────────────
+function isMobile() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
 function openUrl(url) {
-  window.open(url, '_blank', 'noopener');
+  if (isMobile()) {
+    // スマホではYahoo乗換アプリが transit.yahoo.co.jp を横取りして
+    // URLの時刻パラメータを無視するため、Google経由のリダイレクトで
+    // アプリ起動を回避し、ブラウザ（PC版表示）で開く
+    const proxyUrl = 'https://www.google.com/url?q=' + encodeURIComponent(url) + '&sa=D';
+    window.open(proxyUrl, '_blank', 'noopener');
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
 }
 
 function openNow(routeKey) {
