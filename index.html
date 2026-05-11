@@ -456,10 +456,17 @@ function isMobile() {
 function openUrl(url) {
   if (isMobile()) {
     // スマホではYahoo乗換アプリが transit.yahoo.co.jp を横取りして
-    // URLの時刻パラメータを無視するため、Google経由のリダイレクトで
-    // アプリ起動を回避し、ブラウザ（PC版表示）で開く
-    const proxyUrl = 'https://www.google.com/url?q=' + encodeURIComponent(url) + '&sa=D';
-    window.open(proxyUrl, '_blank', 'noopener');
+    // URLの時刻パラメータを無視するため、Universal Link（アプリ自動起動）を
+    // 回避する。空白タブを開いた後、JavaScriptで遷移することで、
+    // OSは「ユーザークリック」ではなく「JSナビゲーション」と判定し、
+    // ブラウザ内で開かれる。
+    const win = window.open('about:blank', '_blank');
+    if (win) {
+      setTimeout(() => { win.location.href = url; }, 50);
+    } else {
+      // ポップアップブロック等で開けない場合のフォールバック
+      window.location.href = url;
+    }
   } else {
     window.open(url, '_blank', 'noopener');
   }
