@@ -309,8 +309,8 @@
   <div class="section-label">時刻を指定して検索</div>
   <div class="search-panel">
     <div class="mobile-hint">
-      ⚠️ スマホはYahoo乗換アプリが起動し、<strong>時刻指定が無視されます</strong>。<br>
-      下のルーレットで希望時刻を確認 → ボタンをタップ → Yahoo乗換アプリの画面上部の時刻を、その時刻に手動で合わせてください。
+      💡 ボタンをタップすると Yahoo乗換のフォームが入力済みで開きます。<br>
+      画面の <strong>「検索」</strong> をもう一度タップしてください（指定した時刻で結果が表示されます）。
     </div>
     <div class="time-type-toggle">
       <button id="btnDepart" class="active" onclick="setTimeType('depart')">出発</button>
@@ -427,7 +427,10 @@ function setOffset(n) {
 // ──────────────────────────────────
 // Yahoo!乗換案内 URL生成
 // ──────────────────────────────────
-function enc(s) { return encodeURIComponent(s); }
+// バス停名の「/」（例: 美杉台ニュータウン/西武バス）を意図的にエンコードせずに
+// 渡すことで、Yahoo側が自動検索せず「検索フォーム入力済み」の状態で開く。
+// ユーザーが画面の「検索」を一度タップすれば、指定した時刻で結果が表示される。
+function enc(s) { return encodeURIComponent(s).replace(/%2F/g, '/'); }
 
 function yahooUrl(from, to, year, month, day, hour, minute, searchType) {
   const mm = p2(minute);
@@ -435,12 +438,9 @@ function yahooUrl(from, to, year, month, day, hour, minute, searchType) {
   const t = searchType === 'arrive' ? 4 : 1;
   return 'https://transit.yahoo.co.jp/search/result'
     + `?from=${enc(from)}&to=${enc(to)}`
-    + `&fromgid=&togid=&flatlon=&tlatlon=&via=&viacode=`
     + `&y=${year}&m=${p2(month)}&d=${p2(day)}`
     + `&hh=${p2(hour)}&m1=${mm[0]}&m2=${mm[1]}`
-    + `&type=${t}&ticket=ic`
-    + `&expkind=1&ws=3&s=0`
-    + `&al=1&shin=1&ex=1&hb=1&lb=1&sr=1`;
+    + `&type=${t}&ticket=ic`;
 }
 
 // ──────────────────────────────────
