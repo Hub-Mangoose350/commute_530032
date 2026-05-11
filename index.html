@@ -87,25 +87,11 @@
       margin-bottom: 6px;
     }
 
-    /* 現在時刻表示（読み取り専用） */
-    .now-display {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 22px;
-      font-weight: 600;
-      color: #1c2333;
-      background: #f8f9fa;
-      border: 1.5px solid #e8eaed;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      letter-spacing: 1px;
-    }
-
     /* 出発／到着トグル */
     .time-type-toggle {
       display: flex;
       gap: 0;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
       border: 1.5px solid #ddd;
       border-radius: 10px;
       overflow: hidden;
@@ -127,28 +113,71 @@
     }
     .time-type-toggle button:first-child { border-right: 1px solid #ddd; }
 
-    /* 時刻セレクト */
-    .time-select-wrap {
+    /* ── ドラムピッカー ── */
+    .drum-wrap {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 12px;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 14px;
     }
-    .time-select-wrap select {
-      flex: 1;
-      padding: 10px 4px;
-      font-size: 28px;
-      font-weight: 700;
-      text-align: center;
+    .drum-picker {
+      position: relative;
+      width: 88px;
+      height: 200px;
+      overflow: hidden;
+      background: white;
       border: 1.5px solid #ddd;
       border-radius: 10px;
-      background: white;
-      color: #1c2333;
-      outline: none;
-      -webkit-appearance: none;
-      appearance: none;
+      cursor: grab;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
     }
-    .time-select-wrap select:focus { border-color: #e75480; }
+    .drum-picker:active { cursor: grabbing; }
+    .drum-picker::before,
+    .drum-picker::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 80px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .drum-picker::before {
+      top: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,.95) 0%, rgba(255,255,255,.3) 100%);
+    }
+    .drum-picker::after {
+      bottom: 0;
+      background: linear-gradient(to top, rgba(255,255,255,.95) 0%, rgba(255,255,255,.3) 100%);
+    }
+    .drum-highlight {
+      position: absolute;
+      top: 80px;
+      left: 0; right: 0;
+      height: 40px;
+      border-top: 2px solid #e75480;
+      border-bottom: 2px solid #e75480;
+      background: rgba(231,84,128,.08);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .drum-list {
+      position: absolute;
+      left: 0; right: 0;
+      will-change: transform;
+    }
+    .drum-item {
+      height: 40px;
+      line-height: 40px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      color: #1c2333;
+      -webkit-user-select: none;
+      user-select: none;
+    }
     .time-sep { font-size: 32px; font-weight: 700; color: #1c2333; flex-shrink: 0; }
 
     /* ボタングリッド（2列×2行） */
@@ -266,10 +295,10 @@
       <button id="btnDepart" class="active" onclick="setTimeType('depart')">出発</button>
       <button id="btnArrive"               onclick="setTimeType('arrive')">到着</button>
     </div>
-    <div class="time-select-wrap">
-      <select id="customHour"></select>
+    <div class="drum-wrap">
+      <div class="drum-picker" id="hourPicker"></div>
       <span class="time-sep">:</span>
-      <select id="customMinute"></select>
+      <div class="drum-picker" id="minutePicker"></div>
     </div>
     <div class="btn-grid">
       <button class="btn btn-blue"   onclick="openCustom('trainHome')">🚃 東飯能<br>→ 高尾</button>
@@ -377,11 +406,10 @@ function setOffset(n) {
 // ──────────────────────────────────
 // Yahoo!乗換案内 URL生成
 // ──────────────────────────────────
-function enc(s) { return encodeURIComponent(s).replace(/%2F/g, '/'); }
+function enc(s) { return encodeURIComponent(s); }
 
 function yahooUrl(from, to, year, month, day, hour, minute, searchType) {
   const mm = p2(minute);
-  // type=1:出発, type=4:到着
   const t = searchType === 'arrive' ? 4 : 1;
   return 'https://transit.yahoo.co.jp/search/result'
     + `?from=${enc(from)}&to=${enc(to)}`
@@ -415,15 +443,9 @@ function buildUrl(routeKey, hour, minute, searchType) {
 }
 
 // ──────────────────────────────────
-// リンクを開く（スマホではアプリ起動を防ぐ）
+// リンクを開く
 // ──────────────────────────────────
 function openUrl(url) {
-  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-    const w = window.open('about:blank', '_blank');
-    if (w) { w.location.href = url; return; }
-    window.location.href = url;
-    return;
-  }
   window.open(url, '_blank', 'noopener');
 }
 
@@ -433,9 +455,127 @@ function openNow(routeKey) {
 }
 
 function openCustom(routeKey) {
-  const h = parseInt(document.getElementById('customHour').value, 10);
-  const m = parseInt(document.getElementById('customMinute').value, 10);
+  const h = hourDrum.getValue();
+  const m = minuteDrum.getValue();
   openUrl(buildUrl(routeKey, h, m, customTimeType));
+}
+
+// ──────────────────────────────────
+// ドラムピッカー
+// ──────────────────────────────────
+function makeDrum(container, values, initIndex) {
+  const ITEM_H = 40;
+  const VISIBLE = 5;
+  const n = values.length;
+  const containerH = ITEM_H * VISIBLE;
+
+  const highlight = document.createElement('div');
+  highlight.className = 'drum-highlight';
+  container.appendChild(highlight);
+
+  const list = document.createElement('div');
+  list.className = 'drum-list';
+  container.appendChild(list);
+
+  // 3回繰り返してループ感を出す
+  for (let r = 0; r < 3; r++) {
+    for (let i = 0; i < n; i++) {
+      const div = document.createElement('div');
+      div.className = 'drum-item';
+      div.textContent = p2(values[i]);
+      list.appendChild(div);
+    }
+  }
+
+  function mod(x) { return ((x % n) + n) % n; }
+
+  // インデックスidxのアイテム（中段の繰り返し）を中央に合わせるY値
+  function getY(idx) {
+    return containerH / 2 - ITEM_H / 2 - (idx + n) * ITEM_H;
+  }
+
+  let currentIdx = mod(initIndex);
+  let currentY = getY(currentIdx);
+  list.style.transform = `translateY(${currentY}px)`;
+
+  function snapTo(rawIdx, animate) {
+    currentIdx = mod(rawIdx);
+    currentY = getY(currentIdx);
+    if (animate) {
+      list.style.transition = 'transform .2s cubic-bezier(.25,.46,.45,.94)';
+      setTimeout(() => { list.style.transition = ''; }, 250);
+    }
+    list.style.transform = `translateY(${currentY}px)`;
+  }
+
+  let startClientY = 0;
+  let startTranslate = 0;
+  let lastClientY = 0;
+  let lastTime = 0;
+  let velocity = 0;
+
+  function getIdxFromY(y) {
+    const centerY = containerH / 2 - ITEM_H / 2;
+    return (centerY - y) / ITEM_H - n;
+  }
+
+  function onStart(y) {
+    startClientY = y;
+    startTranslate = currentY;
+    lastClientY = y;
+    lastTime = Date.now();
+    velocity = 0;
+    list.style.transition = '';
+  }
+
+  function onMove(y) {
+    const now = Date.now();
+    const dt = now - lastTime;
+    if (dt > 0) velocity = (y - lastClientY) / dt;
+    lastClientY = y;
+    lastTime = now;
+    currentY = startTranslate + (y - startClientY);
+    list.style.transform = `translateY(${currentY}px)`;
+  }
+
+  function onEnd() {
+    const momentum = velocity * 180;
+    const finalY = currentY + momentum;
+    snapTo(Math.round(getIdxFromY(finalY)), true);
+  }
+
+  // タッチ操作
+  container.addEventListener('touchstart', e => { onStart(e.touches[0].clientY); }, {passive: true});
+  container.addEventListener('touchmove',  e => { onMove(e.touches[0].clientY); },  {passive: true});
+  container.addEventListener('touchend',   () => onEnd());
+
+  // マウス操作
+  let dragging = false;
+  container.addEventListener('mousedown', e => {
+    dragging = true;
+    onStart(e.clientY);
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => { if (dragging) onMove(e.clientY); });
+  document.addEventListener('mouseup',   () => { if (dragging) { dragging = false; onEnd(); } });
+
+  // ホイール操作
+  let wheelTimer;
+  container.addEventListener('wheel', e => {
+    e.preventDefault();
+    clearTimeout(wheelTimer);
+    const delta = e.deltaY > 0 ? 1 : -1;
+    currentIdx = mod(currentIdx + delta);
+    currentY = getY(currentIdx);
+    list.style.transition = 'transform .12s ease';
+    list.style.transform = `translateY(${currentY}px)`;
+    wheelTimer = setTimeout(() => { list.style.transition = ''; }, 140);
+  }, {passive: false});
+
+  return {
+    getValue: () => values[currentIdx],
+    setIndex: (idx) => snapTo(idx, false),
+  };
 }
 
 // ──────────────────────────────────
@@ -457,28 +597,17 @@ function updateHeader() {
   document.getElementById('clock').textContent = `${p2(now.getHours())}:${p2(now.getMinutes())}`;
 }
 
-function updateAll() {
-  updateHeader();
-}
+function updateAll() { updateHeader(); }
 
 // ──────────────────────────────────
 // 起動・定期更新
 // ──────────────────────────────────
-const _now = new Date();
-const _hourSel = document.getElementById('customHour');
-const _minSel  = document.getElementById('customMinute');
-for (let h = 0; h < 24; h++) {
-  const o = document.createElement('option');
-  o.value = h; o.textContent = p2(h);
-  _hourSel.appendChild(o);
-}
-for (let m = 0; m < 60; m++) {
-  const o = document.createElement('option');
-  o.value = m; o.textContent = p2(m);
-  _minSel.appendChild(o);
-}
-_hourSel.value = _now.getHours();
-_minSel.value  = _now.getMinutes();
+const HOURS   = Array.from({length: 24}, (_, i) => i);
+const MINUTES = Array.from({length: 60}, (_, i) => i);
+
+// 初期値は 10:00
+const hourDrum   = makeDrum(document.getElementById('hourPicker'),   HOURS,   10);
+const minuteDrum = makeDrum(document.getElementById('minutePicker'), MINUTES,  0);
 
 updateAll();
 setInterval(updateAll, 15000);
