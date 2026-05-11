@@ -408,11 +408,21 @@ function setOffset(n) {
 // ──────────────────────────────────
 function enc(s) { return encodeURIComponent(s); }
 
+function isMobile() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
 function yahooUrl(from, to, year, month, day, hour, minute, searchType) {
   const mm = p2(minute);
   // type=1:出発, type=4:到着
   const t = searchType === 'arrive' ? 4 : 1;
-  return 'https://transit.yahoo.co.jp/search/result'
+
+  // スマホはアプリが /search/result の時刻を無視するため、
+  // 検索フォーム画面（/search/）に駅名・日付・時刻を渡して開く。
+  // ユーザーが画面で時刻を確認して「検索」をタップする想定。
+  const path = isMobile() ? '/search/' : '/search/result';
+
+  return 'https://transit.yahoo.co.jp' + path
     + `?from=${enc(from)}&to=${enc(to)}`
     + `&fromgid=&togid=&flatlon=&tlatlon=&via=&viacode=`
     + `&y=${year}&m=${p2(month)}&d=${p2(day)}`
